@@ -1,0 +1,29 @@
+<link rel="import" href="../../../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../../../bower_components/iron-icons/iron-icons.html">
+<dom-module id="owl-bot-commands">
+	<template>
+		<style>
+			:host {
+			}
+            .command {
+                font-style: italic;
+            }
+            .comm {
+                margin-top: 10px;
+            }
+        </style>
+        <div id="commands">
+            <template is="dom-repeat" items="[[commands]]">
+                <div class="comm">
+                    <div class="command">[[item.command]]</div>
+                    <div class="response">[[item.response]]</div>
+                    <paper-button raised on-tap="editCommand">Edit</paper-button>
+                    <paper-button raised on-tap="deleteCommand">Delete</paper-button>
+                </div>
+                
+            </template>
+        </div>
+	</template>
+
+	<script src="owl-bot-commands.js"></script>
+</dom-module>

@@ -3,7 +3,6 @@
 const TwitchBot = require('twitch-bot');
 const EventEmitter = require('events');
 
-
 module.exports = function (nodecg) {
     const emitter = new EventEmitter();
 
@@ -12,20 +11,22 @@ module.exports = function (nodecg) {
         oauth: nodecg.bundleConfig.bot_oauth,
         channels: [nodecg.bundleConfig.channel]
     });
+
+    const botCommands = nodecg.Replicant('commands', {
+        defaultValue: {}
+    });
+
     
     Bot.on('join', () => {
         nodecg.log.info('Joined channel #' + nodecg.bundleConfig.channel);
         Bot.on('message', chatter => {
-            if(chatter.message === '!test') {
-                Bot.say('Test successful :3');
-                return;
-            }
-            if (chatter.message === '!trello') {
-                Bot.say('Trello board for the stream overlay: https://trello.com/b/XrA7gWtC');
+
+            // Reply to bot commands
+            if (botCommands.value[chatter.message] !== undefined) {
+                Bot.say(botCommands.value[chatter.message]);
                 return;
             }
 
-            nodecg.log.info('Send message');
             emitter.emit('message', chatter);
         });
     });

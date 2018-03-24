@@ -1,0 +1,25 @@
+<link rel="import" href="../../../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../../../bower_components/paper-input/paper-input.html">
+<dom-module id="owl-add-command">
+	<template>
+		<style>
+			:host {
+			}
+        </style>
+
+<paper-input label="command" value="{{command}}"></paper-input>
+<paper-input label="reponse" value="{{response}}"></paper-input>
+<template is="dom-if" if="[[!isEditMode]]">
+    <paper-button raised on-tap="addCommand">Add</paper-button>
+</template>        
+<template is="dom-if" if="[[isEditMode]]">
+    <paper-button raised on-tap="editCommand">Edit</paper-button>
+    <paper-button raised on-tap="cancelEditing">Cancel</paper-button>
+</template>
+
+
+
+	</template>
+
+	<script src="owl-add-command.js"></script>
+</dom-module>

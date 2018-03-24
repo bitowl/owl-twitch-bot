@@ -1,0 +1,3 @@
+{
+	"name": "owl-twitch-bot"
+}
