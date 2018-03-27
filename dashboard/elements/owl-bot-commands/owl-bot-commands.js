@@ -23,15 +23,22 @@
                     });
                 }
             })
+
+            nodecg.listenFor('delete-command', () => {
+                this.deleteCommand();
+            });
         }
 
         editCommand(event) {
             nodecg.sendMessage('edit', event.model.item);
         }
 
-        deleteCommand(event) {
-            // TODO: confirm wether deletion is wanted
-            botCommands.value[event.model.item.command] = undefined;
+        confirmDeleteCommand(event) {
+            this.commandToDelete = event.model.item.command
+            nodecg.getDialog('delete-command').open();
+        }
+        deleteCommand() {
+            botCommands.value[this.commandToDelete] = undefined;
             // TODO: fix error message: "trap returned falsish for property '!test2'"
         }
 

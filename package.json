@@ -26,9 +26,26 @@
       {
         "name": "bot-commands",
         "title": "Bot Commands",
-        "width": 2,
+        "width": 3,
         "file": "bot-commands.html",
         "headerColor": "#4b367c"
+      },
+      {
+        "name": "delete-command",
+        "title": "Delete Command?",
+        "width": 2,
+        "file": "delete-command.html",
+        "dialog": true,
+        "dialogButtons": [
+          {
+            "name": "Yes",
+            "type": "confirm"
+          },
+          {
+            "name": "No",
+            "type": "dismiss"
+          }
+        ]
       }
     ]
   },

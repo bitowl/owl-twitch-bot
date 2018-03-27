@@ -5,20 +5,43 @@
 		<style>
 			:host {
 			}
+            #commands {
+                height: 200px;
+                overflow-y: scroll;
+            }
             .command {
                 font-style: italic;
             }
             .comm {
                 margin-top: 10px;
+                display: flex;
+                align-items: center;
             }
+            .leftpart {
+                flex-grow: 1;
+                overflow: auto;
+            }
+            .deleteButton {
+                --paper-button: {
+					background-color: #C9513E;
+					color: white;
+					
+				}
+            }
+            .button {
+                min-width: 50px;
+            }
+            
         </style>
         <div id="commands">
             <template is="dom-repeat" items="[[commands]]">
                 <div class="comm">
-                    <div class="command">[[item.command]]</div>
-                    <div class="response">[[item.response]]</div>
-                    <paper-button raised on-tap="editCommand">Edit</paper-button>
-                    <paper-button raised on-tap="deleteCommand">Delete</paper-button>
+                    <div class="leftpart">
+                        <div class="command">[[item.command]]</div>
+                        <div class="response">[[item.response]]</div>
+                    </div>
+                    <paper-button raised on-tap="editCommand" class="button"><iron-icon icon="icons:create"></iron-icon></paper-button>
+                    <paper-button raised on-tap="confirmDeleteCommand" class="button deleteButton"><iron-icon icon="icons:delete"></iron-icon></paper-button>
                 </div>
                 
             </template>
