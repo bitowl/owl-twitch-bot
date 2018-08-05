@@ -22,7 +22,6 @@
         }
 
         addCommand() {
-            console.log(this.command);
             if (this.command.length === undefined || this.response.length == 0) {return;}
             botCommands.value[this.command] = this.response;
             this.cancelEditing();
