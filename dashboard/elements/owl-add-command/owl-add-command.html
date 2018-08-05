@@ -1,8 +1,9 @@
 <link rel="import" href="../../../bower_components/paper-button/paper-button.html">
 <link rel="import" href="../../../bower_components/paper-input/paper-input.html">
+<link rel="import" href="/bundles/owl-nodecg-styles/dashboard/css/bitowl-theme.html">
 <dom-module id="owl-add-command">
 	<template>
-		<style>
+		<style include="bitowl-theme">
 			:host {
 			}
         </style>
@@ -10,11 +11,11 @@
 <paper-input label="command" value="{{command}}"></paper-input>
 <paper-input label="reponse" value="{{response}}"></paper-input>
 <template is="dom-if" if="[[!isEditMode]]">
-    <paper-button raised on-tap="addCommand">Add</paper-button>
+    <paper-button on-tap="addCommand" class="nodecg-benign">Add</paper-button>
 </template>        
 <template is="dom-if" if="[[isEditMode]]">
-    <paper-button raised on-tap="editCommand">Edit</paper-button>
-    <paper-button raised on-tap="cancelEditing">Cancel</paper-button>
+    <paper-button on-tap="editCommand" class="nodecg-accept">Edit</paper-button>
+    <paper-button on-tap="cancelEditing" class="nodecg-reject">Cancel</paper-button>
 </template>
 
 

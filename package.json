@@ -1,6 +1,6 @@
 {
   "name": "owl-twitch-bot",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Chatbot that connects to twitch chat, can respond to commands with text and supplies the chat messages to other bundles",
   "homepage": "https://bitowl.net",
   "author": {
@@ -21,7 +21,10 @@
     "nodecg-bundle"
   ],
   "nodecg": {
-    "compatibleRange": "~0.9.0",
+    "compatibleRange": "~1.1.0",
+    "bundleDependencies": {
+      "owl-nodecg-styles": "^0.0.0"
+    },
     "dashboardPanels": [
       {
         "name": "bot-commands",

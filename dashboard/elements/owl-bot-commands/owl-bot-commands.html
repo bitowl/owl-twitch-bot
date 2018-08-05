@@ -1,16 +1,14 @@
 <link rel="import" href="../../../bower_components/paper-button/paper-button.html">
 <link rel="import" href="../../../bower_components/iron-icons/iron-icons.html">
+<link rel="import" href="/bundles/owl-nodecg-styles/dashboard/css/bitowl-theme.html">
 <dom-module id="owl-bot-commands">
 	<template>
-		<style>
+		<style include="bitowl-theme">
 			:host {
 			}
             #commands {
                 height: 200px;
                 overflow-y: scroll;
-            }
-            .command {
-                font-style: italic;
             }
             .comm {
                 margin-top: 10px;
@@ -21,13 +19,6 @@
                 flex-grow: 1;
                 overflow: auto;
             }
-            .deleteButton {
-                --paper-button: {
-					background-color: #C9513E;
-					color: white;
-					
-				}
-            }
             .button {
                 min-width: 50px;
             }
@@ -37,11 +28,11 @@
             <template is="dom-repeat" items="[[commands]]">
                 <div class="comm">
                     <div class="leftpart">
-                        <div class="command">[[item.command]]</div>
+                        <div class="command"><span class="owl-label">[[item.command]]</span></div>
                         <div class="response">[[item.response]]</div>
                     </div>
-                    <paper-button raised on-tap="editCommand" class="button"><iron-icon icon="icons:create"></iron-icon></paper-button>
-                    <paper-button raised on-tap="confirmDeleteCommand" class="button deleteButton"><iron-icon icon="icons:delete"></iron-icon></paper-button>
+                    <paper-button on-tap="editCommand" class="button nodecg-configure"><iron-icon icon="icons:create"></iron-icon></paper-button>
+                    <paper-button on-tap="confirmDeleteCommand" class="button nodecg-reject"><iron-icon icon="icons:delete"></iron-icon></paper-button>
                 </div>
                 
             </template>
