@@ -28,7 +28,12 @@ module.exports = function (nodecg) {
 	// eslint-disable-next-line new-cap
 	const client = new tmi.client(options);
 	client.connect();
-	client.on('chat', (channel, userstate, message) => {
+	client.on('chat', (channel, userstate, message, self) => {
+		if (self) {
+			// ignore our own messages
+			return;
+		}
+
 		// Reply to bot commands
 		if (['!music', '!np', '!nowplaying', '!song', '!currentlyplaying'].includes(message)) {
 			const mpcReplicant = nodecg.Replicant('mpc', 'owl-mpc');
@@ -136,8 +141,11 @@ module.exports = function (nodecg) {
 			return;
 		}
 
-		if (botCommands.value[message] !== undefined) {
-			let replacement = botCommands.value[message];
+		const firstSpace = message.indexOf(' ');
+		const cmd = firstSpace < 0 ? message : message.substring(0, firstSpace);
+
+		if (botCommands.value[cmd] !== undefined) {
+			let replacement = botCommands.value[cmd];
 
 			// Handle aliases
 			while (replacement.startsWith('!')) {
@@ -146,6 +154,19 @@ module.exports = function (nodecg) {
 				}
 
 				replacement = botCommands.value[replacement];
+			}
+
+			// Handle parameters
+			if (replacement.includes('$')) {
+				replacement = replacement.replace(new RegExp('\\$u', 'g'), '@' + userstate.username);
+				const parts = message.split(' ');
+
+				for (let i = 0; i < parts.length; i++) {
+					replacement = replacement.replace(new RegExp('\\$' + i, 'g'), parts[i]);
+				}
+
+				parts.splice(0, 1);
+				replacement = replacement.replace(new RegExp('\\$@', 'g'), parts.join(' '));
 			}
 
 			client.say(channel, replacement);
