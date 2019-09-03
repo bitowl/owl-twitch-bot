@@ -10,6 +10,11 @@ module.exports = function (nodecg) {
 		defaultValue: {}
 	});
 
+	const viewers = nodecg.Replicant('viewers', {
+		defaultValue: [],
+		persistent: false
+	});
+
 	const options = {
 		options: {
 			debug: true
@@ -28,6 +33,30 @@ module.exports = function (nodecg) {
 	// eslint-disable-next-line new-cap
 	const client = new tmi.client(options);
 	client.connect();
+
+	client.on('join', (channel, username, self) => {
+		if (nodecg.bundleConfig.ignoredUsers.includes(username)) {
+			return;
+		}
+
+		viewers.value.push(username);
+		console.log('join', username);
+		viewers.value.sort();
+	});
+
+	client.on('part', (channel, username, self) => {
+		if (nodecg.bundleConfig.ignoredUsers.includes(username)) {
+			return;
+		}
+
+		const index = viewers.value.indexOf(username);
+		if (index >= 0) {
+			viewers.value.splice(index, 1);
+		}
+
+		console.log('part', username);
+	});
+
 	client.on('chat', (channel, userstate, message, self) => {
 		if (self) {
 			// ignore our own messages
@@ -152,12 +181,19 @@ module.exports = function (nodecg) {
 			let replacement = botCommands.value[cmd];
 
 			// Handle aliases
+			let aliasCount = 0;
 			while (replacement.startsWith('!')) {
 				if (botCommands.value[replacement] === undefined) {
 					break;
 				}
 
+				if (aliasCount > 5) {
+					replacement = `Are we recursing too deep in aliases for ${replacement}?`;
+					break;
+				}
+
 				replacement = botCommands.value[replacement];
+				aliasCount++;
 			}
 
 			// Handle parameters
