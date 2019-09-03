@@ -41,12 +41,16 @@ module.exports = function (nodecg) {
 			return;
 		}
 
-		if (['!cmds', '!commands'].includes(message)) {
+		if (['!cmds', '!commands', '!help'].includes(message)) {
 			let cmds = Object.keys(botCommands.value);
+            console.log(cmds);
 			// Remove aliases
-			for (const cmd of cmds) {
-				if (botCommands.value[cmd].startsWith('!')) {
-					cmds.splice(cmds.indexOf(cmd), 1);
+			for (let i = cmds.length - 1; i >= 0; i--) {
+                const cmd = cmds[i];
+                console.log(cmd);
+                console.log(botCommands.value[cmd]);
+				if (botCommands.value[cmd] === undefined || botCommands.value[cmd].startsWith('!')) {
+					cmds.splice(i, 1);
 				}
 			}
 
@@ -54,12 +58,12 @@ module.exports = function (nodecg) {
 			cmds = cmds.concat(['!music']);
 
 			cmds.sort();
-			client.say(channel, 'Commands: ' + cmds.join(', '));
+			client.say(channel, 'Available commands: ' + cmds.join(', '));
 			return;
 		}
 
 		if (message.startsWith('!addcmd ')) {
-			if (userstate.mod !== true) {
+			if (userstate.mod !== true && userstate.username !== 'bitowl') {
 				return; // Only for mods
 			}
 
@@ -80,7 +84,7 @@ module.exports = function (nodecg) {
 		}
 
 		if (message.startsWith('!delcmd ')) {
-			if (userstate.mod !== true) {
+			if (userstate.mod !== true && userstate.username !== 'bitowl') {
 				return; // Only for mods
 			}
 
@@ -99,7 +103,7 @@ module.exports = function (nodecg) {
 		}
 
 		if (message.startsWith('!editcmd ')) {
-			if (userstate.mod !== true) {
+			if (userstate.mod !== true && userstate.username !== 'bitowl') {
 				return; // Only for mods
 			}
 
@@ -115,7 +119,7 @@ module.exports = function (nodecg) {
 		}
 
 		if (message.startsWith('!movecmd ')) {
-			if (userstate.mod !== true) {
+			if (userstate.mod !== true && userstate.username !== 'bitowl') {
 				return; // Only for mods
 			}
 
