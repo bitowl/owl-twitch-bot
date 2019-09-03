@@ -164,12 +164,19 @@ module.exports = function (nodecg) {
 			let replacement = botCommands.value[cmd];
 
 			// Handle aliases
+			let aliasCount = 0;
 			while (replacement.startsWith('!')) {
 				if (botCommands.value[replacement] === undefined) {
 					break;
 				}
 
+				if (aliasCount > 5) {
+					replacement = `Are we recursing too deep in aliases for ${replacement}?`;
+					break;
+				}
+
 				replacement = botCommands.value[replacement];
+				aliasCount++;
 			}
 
 			// Handle parameters
