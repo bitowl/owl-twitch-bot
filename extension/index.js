@@ -10,6 +10,11 @@ module.exports = function (nodecg) {
 		defaultValue: {}
 	});
 
+	const viewers = nodecg.Replicant('viewers', {
+		defaultValue: [],
+		persistent: false
+	});
+
 	const options = {
 		options: {
 			debug: true
@@ -28,6 +33,17 @@ module.exports = function (nodecg) {
 	// eslint-disable-next-line new-cap
 	const client = new tmi.client(options);
 	client.connect();
+
+	client.on('join', (channel, username, self) => {
+		viewers.value.push(username);
+		console.log('join', username);
+	});
+
+	client.on('part', (channel, username, self) => {
+		viewers.value.splice(viewers.indexOf(username), 1);
+		console.log('part', username);
+	});
+
 	client.on('chat', (channel, userstate, message, self) => {
 		if (self) {
 			// ignore our own messages
