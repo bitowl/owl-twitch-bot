@@ -41,7 +41,18 @@ module.exports = function (nodecg) {
 		}
 
 		if (botCommands.value[message] !== undefined) {
-			client.say(channel, botCommands.value[message]);
+			let replacement = botCommands.value[message];
+
+			// Handle aliases
+			while (replacement.startsWith('!')) {
+				if (botCommands.value[replacement] === undefined) {
+					break;
+				}
+
+				replacement = botCommands.value[replacement];
+			}
+
+			client.say(channel, replacement);
 			return;
 		}
 
