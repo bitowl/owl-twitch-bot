@@ -1,6 +1,6 @@
 'use strict';
 
-const TwitchBot = require('twitch-bot');
+// Const TwitchBot = require('twitch-bot');
 const EventEmitter = require('events');
 
 module.exports = function (nodecg) {
@@ -30,14 +30,110 @@ module.exports = function (nodecg) {
 	client.connect();
 	client.on('chat', (channel, userstate, message) => {
 		// Reply to bot commands
-		if (message === '!music' ||
-			message === '!np' ||
-			message === '!nowplaying' ||
-			message === '!song' ||
-			message === '!currentlyplaying'
-		) {
+		if (['!music', '!np', '!nowplaying', '!song', '!currentlyplaying'].includes(message)) {
 			const mpcReplicant = nodecg.Replicant('mpc', 'owl-mpc');
 			client.say(channel, 'Currently playing: ' + mpcReplicant.value.artist + ' - ' + mpcReplicant.value.title);
+			return;
+		}
+
+		if (['!cmds', '!commands'].includes(message)) {
+			let cmds = Object.keys(botCommands.value);
+			// Remove aliases
+			for (const cmd of cmds) {
+				if (botCommands.value[cmd].startsWith('!')) {
+					cmds.splice(cmds.indexOf(cmd), 1);
+				}
+			}
+
+			// Add commands defined in code
+			cmds = cmds.concat(['!music']);
+
+			cmds.sort();
+			client.say(channel, 'Commands: ' + cmds.join(', '));
+			return;
+		}
+
+		if (message.startsWith('!addcmd ')) {
+			if (userstate.mod !== true) {
+				return; // Only for mods
+			}
+
+			const secondSpace = message.indexOf(' ', 8);
+			const cmd = message.substring(8, secondSpace);
+			const text = message.substring(secondSpace + 1);
+
+			if (botCommands.value[cmd] !== undefined) {
+				client.say(channel, `@${userstate.username} Command ${cmd} already exists.`);
+				return;
+			}
+
+			botCommands.value[cmd] = text;
+
+			client.say(channel, `@${userstate.username} Added command ${cmd}.`);
+
+			return;
+		}
+
+		if (message.startsWith('!delcmd ')) {
+			if (userstate.mod !== true) {
+				return; // Only for mods
+			}
+
+			const cmd = message.substring(8);
+
+			if (botCommands.value[cmd] === undefined) {
+				client.say(channel, `@${userstate.username} Command ${cmd} does not exist.`);
+				return;
+			}
+
+			botCommands.value[cmd] = undefined;
+
+			client.say(channel, `@${userstate.username} Deleted command ${cmd}.`);
+
+			return;
+		}
+
+		if (message.startsWith('!editcmd ')) {
+			if (userstate.mod !== true) {
+				return; // Only for mods
+			}
+
+			const secondSpace = message.indexOf(' ', 9);
+			const cmd = message.substring(9, secondSpace);
+			const text = message.substring(secondSpace + 1);
+
+			botCommands.value[cmd] = text;
+
+			client.say(channel, `@${userstate.username} Edited command ${cmd}.`);
+
+			return;
+		}
+
+		if (message.startsWith('!movecmd ')) {
+			if (userstate.mod !== true) {
+				return; // Only for mods
+			}
+
+			const secondSpace = message.indexOf(' ', 9);
+			const oldCmd = message.substring(9, secondSpace);
+			const newCmd = message.substring(secondSpace + 1);
+
+			if (botCommands.value[oldCmd] === undefined) {
+				client.say(channel, `@${userstate.username} Command ${oldCmd} does not exist.`);
+				return;
+			}
+
+			if (botCommands.value[newCmd] !== undefined) {
+				client.say(channel, `@${userstate.username} Command ${newCmd} already exists.`);
+				return;
+			}
+
+			botCommands.value[newCmd] = botCommands.value[oldCmd];
+			botCommands.value[oldCmd] = undefined;
+
+			client.say(channel, `@${userstate.username} Renamed command ${oldCmd} to ${newCmd}.`);
+
+			return;
 		}
 
 		if (botCommands.value[message] !== undefined) {
