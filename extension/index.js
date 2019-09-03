@@ -35,12 +35,25 @@ module.exports = function (nodecg) {
 	client.connect();
 
 	client.on('join', (channel, username, self) => {
+		if (nodecg.bundleConfig.ignoredUsers.includes(username)) {
+			return;
+		}
+
 		viewers.value.push(username);
 		console.log('join', username);
+		viewers.value.sort();
 	});
 
 	client.on('part', (channel, username, self) => {
-		viewers.value.splice(viewers.indexOf(username), 1);
+		if (nodecg.bundleConfig.ignoredUsers.includes(username)) {
+			return;
+		}
+
+		const index = viewers.value.indexOf(username);
+		if (index >= 0) {
+			viewers.value.splice(index, 1);
+		}
+
 		console.log('part', username);
 	});
 
