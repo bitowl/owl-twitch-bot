@@ -2,117 +2,130 @@
 
 // Const TwitchBot = require('twitch-bot');
 const EventEmitter = require('events');
-const { isURL } = require('validator');
+const {isURL} = require('validator');
 
 module.exports = function (nodecg) {
-  const emitter = new EventEmitter();
+	const emitter = new EventEmitter();
 
-  const botCommands = nodecg.Replicant('commands', {
-    defaultValue: {}
-  }
+	const botCommands = nodecg.Replicant('commands', {
+		defaultValue: {}
+	}
 
-  );
+	);
 
-  const viewers = nodecg.Replicant('viewers', {
-    defaultValue: [],
-    persistent: false
-  }
+	const viewers = nodecg.Replicant('viewers', {
+		defaultValue: [],
+		persistent: false
+	}
 
-  );
+	);
 
-  const options = {
-    options: {
-      // Debug: true
-    },
+	// Users that are allowed to post the next link
+	const permittedUsers = nodecg.Replicant('permittedUsers', {
+		defaultValue: [],
+		persistent: false
+	});
 
-    connection: {
-      reconnect: true
-    },
+	// Users that are always allowed to post links
+	const trustedUsers = nodecg.Replicant('trustedUsers', {
+		defaultValue: [],
+		persistent: true
+	});
 
-    identity: {
-      username: nodecg.bundleConfig.bot_username,
-      password: nodecg.bundleConfig.bot_oauth
-    },
+	const options = {
+		options: {
+			// Debug: true
+		},
 
-    channels: [nodecg.bundleConfig.channel]
-  };
-  const tmi = require('tmi.js');
-  // eslint-disable-next-line new-cap
-  const client = new tmi.client(options);
-  client.connect();
+		connection: {
+			reconnect: true
+		},
 
-  client.on('join', (channel, username, self) => {
-    if (self) {
-      nodecg.log.info('Joined channel ' + channel);
-      return;
-    }
+		identity: {
+			username: nodecg.bundleConfig.bot_username,
+			password: nodecg.bundleConfig.bot_oauth
+		},
 
-    if (nodecg.bundleConfig.ignoredUsers.includes(username)) {
-      return;
-    }
+		channels: [nodecg.bundleConfig.channel]
+	};
+	const tmi = require('tmi.js');
+	// eslint-disable-next-line new-cap
+	const client = new tmi.client(options);
+	client.connect();
 
-    viewers.value.push(username);
-    viewers.value.sort();
-  }
+	client.on('join', (channel, username, self) => {
+		if (self) {
+			nodecg.log.info('Joined channel ' + channel);
+			return;
+		}
 
-  );
+		if (nodecg.bundleConfig.ignoredUsers.includes(username)) {
+			return;
+		}
 
-  client.on('part', (channel, username, self) => {
-    if (self) {
-      nodecg.log.info('Left channel ' + channel);
-      return;
-    }
+		viewers.value.push(username);
+		viewers.value.sort();
+	}
 
-    if (nodecg.bundleConfig.ignoredUsers.includes(username)) {
-      return;
-    }
+	);
 
-    const index = viewers.value.indexOf(username);
+	client.on('part', (channel, username, self) => {
+		if (self) {
+			nodecg.log.info('Left channel ' + channel);
+			return;
+		}
 
-    if (index >= 0) {
-      viewers.value.splice(index, 1);
-    }
+		if (nodecg.bundleConfig.ignoredUsers.includes(username)) {
+			return;
+		}
 
-    console.log('part', username);
-  }
+		const index = viewers.value.indexOf(username);
 
-  );
+		if (index >= 0) {
+			viewers.value.splice(index, 1);
+		}
 
-  client.on('chat', (channel, userstate, message, self) => {
-    if (self) {
-      // ignore our own messages
-      return;
-    }
+		console.log('part', username);
+	}
 
-    const chatter = {
-      channel, userstate, message, self
-    }
+	);
 
-      ;
+	client.on('chat', (channel, userstate, message, self) => {
+		if (self) {
+			// ignore our own messages
+			return;
+		}
 
-    // Should this message be emitted, so that other bundles (e.g. owl-twitch-chat) can use it?
-    let forwardToOtherBundles = true;
+		const chatter = {
+			channel, userstate, message, self
+		};
 
-    if (deleteLinks(chatter)) {
-      // If there was a unpermitted link in a command, don't even handle the command, as the bot might repeat the link
-      return;
-    }
+		// Should this message be emitted, so that other bundles (e.g. owl-twitch-chat) can use it?
+		let forwardToOtherBundles = true;
+		let handleBotCommands = true;
 
-    if (handleCommands(chatter)) {
-      forwardToOtherBundles = false;
-    }
+		if (deleteLinks(chatter)) {
+			// If there was a unpermitted link in a command, don't even handle the command, as the bot might repeat the link
+			handleBotCommands = false;
+		}
 
-    const result = userstate;
-    // Bring into format of twitch-bot
-    result.message = message;
-    result.emotes = userstate['emotes-raw'];
-    // eslint-disable-next-line camelcase
-    result.display_name = userstate['display-name'];
+		if (handleBotCommands && handleCommands(chatter)) {
+			forwardToOtherBundles = false;
+		}
 
-    emitter.emit('message', result);
-  }
+		if (forwardToOtherBundles) {
+			const result = userstate;
+			// Bring into format of twitch-bot
+			result.message = message;
+			result.emotes = userstate['emotes-raw'];
+			// eslint-disable-next-line camelcase
+			result.display_name = userstate['display-name'];
 
-  );
+			emitter.emit('message', result);
+		}
+	}
+
+	);
 
 	/*
   Const Bot = new TwitchBot({
@@ -157,214 +170,279 @@ module.exports = function (nodecg) {
     nodecg.log.error(err);
   });
 */
-  function deleteLinks(chatter) {
-    if (containsLink(chatter.message)) {
-      client.deletemessage(chatter.channel, chatter.userstate.id);
+	function deleteLinks(chatter) {
+		if (containsLink(chatter.message)) {
+			if (isMod(chatter.userstate)) {
+				return false;
+			}
 
-      client.say(chatter.channel, `@${chatter.userstate.username} It's dangerous to send out links. Please ask kindly before you do.`);
-      return true;
-    }
+			if (permittedUsers.value.includes(chatter.userstate.username)) { // User was permitted to send this one link
+				permittedUsers.value.splice(permittedUsers.value.indexOf(chatter.userstate.username), 1);
+				return false;
+			}
 
-    return false;
-  }
+			if (trustedUsers.value.includes(chatter.userstate.username)) {
+				return false;
+			}
 
-  function containsLink(message) {
-    return isURL(message);
-  }
+			client.deletemessage(chatter.channel, chatter.userstate.id);
 
-  const buildinCommands = {
+			client.say(chatter.channel, `@${chatter.userstate.username} It's dangerous to send links. Please ask a person with a sword before you do.`);
+			return true;
+		}
 
-    // Ask for currently playing music
-    '!music': {
-      exec: chatter => {
-        const mpcReplicant = nodecg.Replicant('mpc', 'owl-mpc');
-        client.say(chatter.channel,
-          'Currently playing: ' + mpcReplicant.value.artist + ' - ' + mpcReplicant.value.title);
-      }
-    },
-    '!np': { alias: '!music' },
-    '!nowplaying': { alias: '!music' },
-    '!song': { alias: '!music' },
-    '!currentlyplaying': { alias: '!music' },
+		return false;
+	}
 
-    // Help
-    '!help': {
-      exec: chatter => {
-        let cmds = Object.keys(botCommands.value);
-        console.log(cmds);
+	// https://stackoverflow.com/a/5717133
+	const linkRegex = RegExp('((ft|htt)ps?:\\/\\/)?' + // Protocol
+    '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|' + // Domain name and extension
+    '((\\d{1,3}\\.){3}\\d{1,3}))' + // OR ip (v4) address
+    '(\\:\\d+)?' + // Port
+    '(\\/[-a-z\\d%@_.~+&:\\(\\)]*)*' + // Path
+    '(\\?[;&a-z\\d%@_.,~+&:=-]*)?' + // Query string
+    '(\\#[-a-z\\d_]*)?', 'i'); // Fragment locator
+	function containsLink(message) {
+		return linkRegex.test(message);
+	}
 
-        // Remove aliases
-        for (let i = cmds.length - 1; i >= 0; i--) {
-          const cmd = cmds[i];
-          console.log(cmd);
-          console.log(botCommands.value[cmd]);
+	const buildinCommands = {
 
-          if (botCommands.value[cmd] === undefined || botCommands.value[cmd].startsWith('!')) {
-            cmds.splice(i, 1);
-          }
-        }
+		// Ask for currently playing music
+		'!music': {
+			exec: chatter => {
+				const mpcReplicant = nodecg.Replicant('mpc', 'owl-mpc');
+				client.say(chatter.channel,
+					'Currently playing: ' + mpcReplicant.value.artist + ' - ' + mpcReplicant.value.title);
+			}
+		},
+		'!np': {alias: '!music'},
+		'!nowplaying': {alias: '!music'},
+		'!song': {alias: '!music'},
+		'!currentlyplaying': {alias: '!music'},
 
-        // Add commands defined in code
-        cmds = cmds.concat(['!music']);
+		// Help
+		'!help': {
+			exec: chatter => {
+				let cmds = Object.keys(botCommands.value);
 
-        cmds.sort();
-        client.say(chatter.channel, 'Available commands: ' + cmds.join(', '));
-      }
-    },
-    '!cmds': { alias: '!help' },
-    '!commands': { alias: '!help' },
+				// Remove aliases
+				for (let i = cmds.length - 1; i >= 0; i--) {
+					const cmd = cmds[i];
 
-    // Managing commands
-    '!addcmd': {
-      needsMod: true,
-      exec: (chatter, args) => {
-        const secondSpace = args.indexOf(' ');
-        const cmd = args.substring(0, secondSpace);
-        const text = args.substring(secondSpace + 1);
+					if (botCommands.value[cmd] === undefined || botCommands.value[cmd].startsWith('!')) {
+						cmds.splice(i, 1);
+					}
+				}
 
-        if (botCommands.value[cmd] !== undefined) {
-          client.say(chatter.channel, `@${chatter.userstate.username} Command ${cmd} already exists.`);
-          return;
-        }
+				// Add commands defined in code
+				cmds = cmds.concat(['!music']);
 
-        botCommands.value[cmd] = text;
+				cmds.sort();
+				client.say(chatter.channel, 'Available commands: ' + cmds.join(', '));
+			}
+		},
+		'!cmds': {alias: '!help'},
+		'!commands': {alias: '!help'},
 
-        client.say(chatter.channel, `@${chatter.userstate.username} Added command ${cmd}.`);
-      }
-    },
-    '!delcmd': {
-      needsMod: true,
-      exec: (chatter, args) => {
-        const cmd = args;
+		// Managing commands
+		'!addcmd': {
+			needsMod: true,
+			exec: (chatter, args) => {
+				const secondSpace = args.indexOf(' ');
+				const cmd = args.substring(0, secondSpace);
+				const text = args.substring(secondSpace + 1);
 
-        if (botCommands.value[cmd] === undefined) {
-          client.say(chatter.channel, `@${chatter.userstate.username} Command ${cmd} does not exist.`);
-          return;
-        }
+				if (botCommands.value[cmd] !== undefined) {
+					client.say(chatter.channel, `@${chatter.userstate.username} Command ${cmd} already exists.`);
+					return;
+				}
 
-        botCommands.value[cmd] = undefined;
+				botCommands.value[cmd] = text;
 
-        client.say(chatter.channel, `@${chatter.userstate.username} Deleted command ${cmd}.`);
-      }
-    },
-    '!editcmd': {
-      needsMod: true,
-      exec: (chatter, args) => {
-        const secondSpace = args.indexOf(' ');
-        const cmd = args.substring(0, secondSpace);
-        const text = args.substring(secondSpace + 1);
+				client.say(chatter.channel, `@${chatter.userstate.username} Added command ${cmd}.`);
+			}
+		},
+		'!delcmd': {
+			needsMod: true,
+			exec: (chatter, args) => {
+				const cmd = args;
 
-        botCommands.value[cmd] = text;
+				if (botCommands.value[cmd] === undefined) {
+					client.say(chatter.channel, `@${chatter.userstate.username} Command ${cmd} does not exist.`);
+					return;
+				}
 
-        client.say(chatter.channel, `@${chatter.userstate.username} Edited command ${cmd}.`);
-      }
-    },
-    '!movecmd': {
-      needsMod: true,
-      exec: (chatter, args) => {
-        const secondSpace = args.indexOf(' ');
-        const oldCmd = args.substring(0, secondSpace);
-        const newCmd = args.substring(secondSpace + 1);
+				botCommands.value[cmd] = undefined;
 
-        if (botCommands.value[oldCmd] === undefined) {
-          client.say(chatter.channel, `@${chatter.userstate.username} Command ${oldCmd} does not exist.`);
-          return;
-        }
+				client.say(chatter.channel, `@${chatter.userstate.username} Deleted command ${cmd}.`);
+			}
+		},
+		'!editcmd': {
+			needsMod: true,
+			exec: (chatter, args) => {
+				const secondSpace = args.indexOf(' ');
+				const cmd = args.substring(0, secondSpace);
+				const text = args.substring(secondSpace + 1);
 
-        if (botCommands.value[newCmd] !== undefined) {
-          client.say(chatter.channel, `@${chatter.userstate.username} Command ${newCmd} already exists.`);
-          return;
-        }
+				botCommands.value[cmd] = text;
 
-        botCommands.value[newCmd] = botCommands.value[oldCmd];
-        botCommands.value[oldCmd] = undefined;
+				client.say(chatter.channel, `@${chatter.userstate.username} Edited command ${cmd}.`);
+			}
+		},
+		'!movecmd': {
+			needsMod: true,
+			exec: (chatter, args) => {
+				const secondSpace = args.indexOf(' ');
+				const oldCmd = args.substring(0, secondSpace);
+				const newCmd = args.substring(secondSpace + 1);
 
-        client.say(chatter.channel, `@${chatter.userstate.username} Renamed command ${oldCmd} to ${newCmd}.`);
-      }
-    },
+				if (botCommands.value[oldCmd] === undefined) {
+					client.say(chatter.channel, `@${chatter.userstate.username} Command ${oldCmd} does not exist.`);
+					return;
+				}
 
-    '!js': {
-      exec: (chatter, args) => {
-        try {
-          const result = eval(args);
-          client.say(chatter.channel, `@${chatter.userstate.username} ${result}`);
-        } catch (error) {
-          client.say(chatter.channel, `@${chatter.userstate.username} ERROR: ${error}`);
-        }
-      }
-    }
-  };
+				if (botCommands.value[newCmd] !== undefined) {
+					client.say(chatter.channel, `@${chatter.userstate.username} Command ${newCmd} already exists.`);
+					return;
+				}
 
-  function handleCommands(chatter) {
-    const firstSpace = chatter.message.indexOf(' ');
-    const cmd = firstSpace >= 0 ? chatter.message.substring(0, firstSpace) : chatter.message;
-    const args = firstSpace >= 0 ? chatter.message.substring(firstSpace + 1) : '';
+				botCommands.value[newCmd] = botCommands.value[oldCmd];
+				botCommands.value[oldCmd] = undefined;
 
-    // Handle buildin commands
-    if (Object.prototype.hasOwnProperty.call(buildinCommands, cmd)) {
-      let toExecute = buildinCommands[cmd];
-      while (toExecute.alias !== undefined) {
-        // Alias
-        toExecute = buildinCommands[toExecute.alias];
-      }
+				client.say(chatter.channel, `@${chatter.userstate.username} Renamed command ${oldCmd} to ${newCmd}.`);
+			}
+		},
 
-      if (toExecute.needsMod && !isMod(chatter.userstate)) {
-        // This user is not allowed to execute this command
-        return false;
-      }
+		// Permit users
+		'!permit': {
+			needsMod: true,
+			exec: (chatter, args) => {
+				const user = getUser(args);
+				if (permittedUsers.value.includes(user) || trustedUsers.value.includes(user)) {
+					client.say(chatter.channel, `@${chatter.userstate.username} ${user} is already allowed to send links.`);
+					return;
+				}
 
-      // TODO test that toExecute.exec is a function?
-      toExecute.exec(chatter, args, cmd);
-      return true;
-    }
+				permittedUsers.value.push(user);
+				client.say(chatter.channel, `@${user} is allowed to send one link.`);
+			}
+		},
+		'!trust': {
+			needsMod: true,
+			exec: (chatter, args) => {
+				const user = getUser(args);
+				if (trustedUsers.value.includes(user)) {
+					client.say(chatter.channel, `@${chatter.userstate.username} ${user} is already allowed to permanently send links.`);
+					return;
+				}
 
-    if (botCommands.value[cmd] !== undefined) {
-      let replacement = botCommands.value[cmd];
+				trustedUsers.value.push(user);
+				client.say(chatter.channel, `@${user} is allowed to now send links.`);
+			}
+		},
+		'!untrust': {
+			needsMod: true,
+			exec: (chatter, args) => {
+				const user = getUser(args);
+				if (!trustedUsers.value.includes(user) && !permittedUsers.value.includes(user)) {
+					client.say(chatter.channel, `@${chatter.userstate.username} ${user} is already not allowed to send links.`);
+					return;
+				}
 
-      // Handle aliases
-      let aliasCount = 0;
+				const permittedIndex = permittedUsers.value.indexOf(user);
+				if (permittedIndex >= 0) {
+					permittedUsers.value.splice(permittedIndex, 1);
+				}
 
-      while (replacement.startsWith('!')) {
-        if (botCommands.value[replacement] === undefined) {
-          break;
-        }
+				const trustedIndex = trustedUsers.value.indexOf(user);
+				if (trustedIndex >= 0) {
+					trustedUsers.value.splice(trustedIndex, 1);
+				}
 
-        if (aliasCount > 5) {
-          replacement = `Are we recursing too deep in aliases for ${replacement}?`;
-          break;
-        }
+				client.say(chatter.channel, `@${chatter.userstate.username} ${user} can no longer send links.`);
+			}
+		}
+	};
 
-        replacement = botCommands.value[replacement];
-        aliasCount++;
-      }
+	function handleCommands(chatter) {
+		const firstSpace = chatter.message.indexOf(' ');
+		const cmd = firstSpace >= 0 ? chatter.message.substring(0, firstSpace) : chatter.message;
+		const args = firstSpace >= 0 ? chatter.message.substring(firstSpace + 1) : '';
 
-      // Handle parameters
-      if (replacement.includes('$')) {
-        replacement = replacement.replace(new RegExp('\\$u', 'g'),
-          '@' + chatter.userstate.username);
-        const parts = chatter.message.split(' ');
+		// Handle buildin commands
+		if (Object.prototype.hasOwnProperty.call(buildinCommands, cmd)) {
+			let toExecute = buildinCommands[cmd];
+			while (toExecute.alias !== undefined) {
+				// Alias
+				toExecute = buildinCommands[toExecute.alias];
+			}
 
-        for (let i = 0; i < parts.length; i++) {
-          replacement = replacement.replace(new RegExp('\\$' + i, 'g'),
-            parts[i]);
-        }
+			if (toExecute.needsMod && !isMod(chatter.userstate)) {
+				// This user is not allowed to execute this command
+				return false;
+			}
 
-        parts.splice(0, 1);
-        replacement = replacement.replace(new RegExp('\\$@', 'g'),
-          parts.join(' '));
-      }
+			// TODO test that toExecute.exec is a function?
+			toExecute.exec(chatter, args, cmd);
+			return true;
+		}
 
-      client.say(chatter.channel, replacement);
-      return true;
-    }
+		if (botCommands.value[cmd] !== undefined) {
+			let replacement = botCommands.value[cmd];
 
-    return false;
-  }
+			// Handle aliases
+			let aliasCount = 0;
 
-  function isMod(userstate) {
-    return userstate.mod || userstate.username === nodecg.bundleConfig.channel;
-  }
+			while (replacement.startsWith('!')) {
+				if (botCommands.value[replacement] === undefined) {
+					break;
+				}
 
-  return emitter;
+				if (aliasCount > 5) {
+					replacement = `Are we recursing too deep in aliases for ${replacement}?`;
+					break;
+				}
+
+				replacement = botCommands.value[replacement];
+				aliasCount++;
+			}
+
+			// Handle parameters
+			if (replacement.includes('$')) {
+				replacement = replacement.replace(new RegExp('\\$u', 'g'),
+					'@' + chatter.userstate.username);
+				const parts = chatter.message.split(' ');
+
+				for (let i = 0; i < parts.length; i++) {
+					replacement = replacement.replace(new RegExp('\\$' + i, 'g'),
+						parts[i]);
+				}
+
+				parts.splice(0, 1);
+				replacement = replacement.replace(new RegExp('\\$@', 'g'),
+					parts.join(' '));
+			}
+
+			client.say(chatter.channel, replacement);
+			return true;
+		}
+
+		return false;
+	}
+
+	function isMod(userstate) {
+		return userstate.mod || userstate.username === nodecg.bundleConfig.channel;
+	}
+
+	function getUser(args) {
+		if (args.startsWith('@')) {
+			return args.substring(1);
+		}
+
+		return args;
+	}
+
+	return emitter;
 };
 
