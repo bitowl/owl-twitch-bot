@@ -1,8 +1,6 @@
 'use strict';
 
-// Const TwitchBot = require('twitch-bot');
 const EventEmitter = require('events');
-const {isURL} = require('validator');
 
 module.exports = function (nodecg) {
 	const emitter = new EventEmitter();
