@@ -222,7 +222,7 @@ module.exports = function (nodecg) {
 		// Help
 		'!help': {
 			exec: chatter => {
-				let cmds = Object.keys(botCommands.value);
+				const cmds = Object.keys(botCommands.value);
 
 				// Remove aliases
 				for (let i = cmds.length - 1; i >= 0; i--) {
@@ -234,7 +234,21 @@ module.exports = function (nodecg) {
 				}
 
 				// Add commands defined in code
-				cmds = cmds.concat(['!music']);
+				const bldin = Object.keys(buildinCommands);
+
+				for (let i = 0; i < bldin.length; i++) {
+					const cmd = buildinCommands[bldin[i]];
+					// Ignore aliases and mod-only commands
+					if (cmd.alias) {
+						continue;
+					}
+
+					if (cmd.needsMod) {
+						continue;
+					}
+
+					cmds.push(bldin[i]);
+				}
 
 				cmds.sort();
 				client.say(chatter.channel, 'Available commands: ' + cmds.join(', '));
@@ -359,6 +373,51 @@ module.exports = function (nodecg) {
 				}
 
 				client.say(chatter.channel, `@${chatter.userstate.username} ${user} can no longer send links.`);
+			}
+		},
+
+		// Everyone cares about time
+		'!localtime': {
+			exec: chatter => {
+				const date = new Date();
+				function l0(num) {
+					if (num < 10) {
+						return '0' + num;
+					}
+
+					return num;
+				}
+
+				const time = l0(date.getHours()) + ':' + l0(date.getMinutes());
+				client.say(chatter.channel, `@${chatter.userstate.username} The current time here is ${time}.`);
+			}
+		},
+		'!uptime': {
+			exec: chatter => {
+				const streamStart = nodecg.readReplicant('start', 'owl-twitch-info');
+				if (typeof streamStart !== 'string') {
+					client.say(chatter.channel, `@${chatter.userstate.username} Cannot determine uptime right now.`);
+					return;
+				}
+
+				const startDate = Date.parse(streamStart);
+				const difference = new Date() - startDate;
+				// https://stackoverflow.com/a/37096512
+				function secondsToHms(d) {
+					d = Number(d);
+					const h = Math.floor(d / 3600);
+					const m = Math.floor(d % 3600 / 60);
+					const s = Math.floor(d % 3600 % 60);
+
+					const hDisplay = h > 0 ? h + (h === 1 ? ' hour, ' : ' hours, ') : '';
+					const mDisplay = m > 0 ? m + (m === 1 ? ' minute and ' : ' minutes and ') : '';
+					const sDisplay = s > 0 ? s + (s === 1 ? ' second' : ' seconds') : '';
+					return hDisplay + mDisplay + sDisplay;
+				}
+
+				const time = secondsToHms(difference / 1000);
+
+				client.say(chatter.channel, `@${chatter.userstate.username} The stream has been online for ${time}.`);
 			}
 		}
 	};
