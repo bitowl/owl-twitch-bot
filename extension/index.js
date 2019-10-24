@@ -2,7 +2,7 @@
 
 const EventEmitter = require("events");
 
-module.exports = function(nodecg) {
+module.exports = function (nodecg) {
   const emitter = new EventEmitter();
 
   const botCommands = nodecg.Replicant("commands", {
@@ -198,7 +198,7 @@ module.exports = function(nodecg) {
     "(\\:\\d+)?" + // Port
     "(\\/[-a-z\\d%@_.~+&:\\(\\)]*)*" + // Path
     "(\\?[;&a-z\\d%@_.,~+&:=-]*)?" + // Query string
-      "(\\#[-a-z\\d_]*)?",
+    "(\\#[-a-z\\d_]*)?",
     "i"
   ); // Fragment locator
   function containsLink(message) {
@@ -213,9 +213,9 @@ module.exports = function(nodecg) {
         client.say(
           chatter.channel,
           "Currently playing: " +
-            mpcReplicant.value.artist +
-            " - " +
-            mpcReplicant.value.title
+          mpcReplicant.value.artist +
+          " - " +
+          mpcReplicant.value.title
         );
       }
     },
@@ -229,16 +229,21 @@ module.exports = function(nodecg) {
       exec: chatter => {
         const cmds = Object.keys(botCommands.value);
 
-        // Remove aliases
+
         for (let i = cmds.length - 1; i >= 0; i--) {
           const cmd = cmds[i];
 
-          if (
-            botCommands.value[cmd] === undefined ||
-            botCommands.value[cmd].startsWith("!")
-          ) {
+          if (!cmd.startsWith('!')) {
+            // Only show commands starting with !
             cmds.splice(i, 1);
-          }
+          } else
+            // Remove aliases
+            if (
+              botCommands.value[cmd] === undefined ||
+              botCommands.value[cmd].startsWith("!")
+            ) {
+              cmds.splice(i, 1);
+            }
         }
 
         // Add commands defined in code
@@ -515,7 +520,7 @@ module.exports = function(nodecg) {
       // Handle aliases
       let aliasCount = 0;
 
-      while (replacement.startsWith("!")) {
+      while (replacement.startsWith("!") || replacement.startsWith('#')) {
         if (botCommands.value[replacement] === undefined) {
           break;
         }
